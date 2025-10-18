@@ -1,3 +1,4 @@
+#include "GL/glew.h"
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -26,6 +27,10 @@ int main() {
   }
   // Make OpenGL context current
   glfwMakeContextCurrent(window);
+  glewExperimental = GL_TRUE;
+  glewInit();
+  GLuint vertexBuffer;
+  glGenBuffers(1, &vertexBuffer);
 
   int width;
   int height;
