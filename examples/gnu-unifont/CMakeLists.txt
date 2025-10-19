@@ -6,3 +6,6 @@ find_package(OpenGL REQUIRED)
 target_link_libraries(gnu-unifont OpenGL::GL)
 find_package(GLEW)
 target_link_libraries(gnu-unifont GLEW::GLEW)
+
+target_link_libraries(gnu-unifont m)
+target_link_libraries(gnu-unifont example-utils)
