@@ -1,8 +1,10 @@
 #include "shader.h"
 
 #include <GL/glew.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 unsigned int compileShader(int shaderType, const char *shaderSource) {
   unsigned int shader;
@@ -14,7 +16,8 @@ unsigned int compileShader(int shaderType, const char *shaderSource) {
   if (!success) {
     char infoLog[512];
     glGetShaderInfoLog(shader, 512, NULL, infoLog);
-    fprintf(stderr, "Failed to compile type %d shader! Error: %s\n", shaderType,
+    const char *shaderTypeName = shaderType == GL_VERTEX_SHADER ? "vertex" : "fragment";
+    fprintf(stderr, "Failed to compile %s shader! Error: %s\n", shaderTypeName,
             infoLog);
     exit(EXIT_FAILURE);
   }
@@ -52,15 +55,17 @@ shaderId compileAndLinkShader(const char *vertexPath, const char *fragPath) {
     exit(EXIT_FAILURE);
   }
   char srcBuf[8192];
-  fread(srcBuf, 8192, 1, vertexFile);
+  memset(srcBuf, 0, 8192);
+  fread(srcBuf, 1, 8192, vertexFile);
+  fclose(vertexFile);
   unsigned int vert = compileShader(GL_VERTEX_SHADER, srcBuf);
-  fread(srcBuf, 8192, 1, fragFile);
+  memset(srcBuf, 0, 8192);
+  fread(srcBuf, 1, 8192, fragFile);
+  fclose(fragFile);
   unsigned int frag = compileShader(GL_FRAGMENT_SHADER, srcBuf);
   shaderId program = linkShaders(2, (unsigned int[2]){vert, frag});
   glDeleteShader(vert);
   glDeleteShader(frag);
-  fclose(vertexFile);
-  fclose(fragFile);
   return program;
 }
 
