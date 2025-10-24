@@ -1,0 +1,2 @@
+# We use the download script to get fonts so no need to track them.
+examples/common/fonts
