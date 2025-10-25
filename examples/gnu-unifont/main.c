@@ -37,6 +37,11 @@ int main() {
   printf("bounding box: x: %d, y: %d. offset: x: %d, y: %d\n",
          result_font->font_bouding_box[0], result_font->font_bouding_box[1],
          result_font->font_bouding_box[2], result_font->font_bouding_box[3]);
+  printf("font number of glyphs: %zu\n", result_font->n_glyphs);
+  for (size_t i = 0; i < result_font->n_glyphs; ++i) {
+    printf("glyph %s:\n", result_font->glyphs[i].name);
+    printf("\t encoding: %d\n", result_font->glyphs[i].encoding);
+  }
   free_font(BDF, result_font);
 
   // Set error callback
