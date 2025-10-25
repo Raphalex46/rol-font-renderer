@@ -26,11 +26,10 @@
     }                                                                          \
   } while (0)
 
-#define KEYWORD_CASE(line, keyword, font, token, parse_func)                   \
+#define KEYWORD_CASE(keyword, token, parse_func)                               \
   do {                                                                         \
     if (!strcmp(keyword, token)) {                                             \
-      FORWARD_ERR(remove_keyword(&line, token));                               \
-      FORWARD_ERR(parse_func(line, font));                                     \
+      FORWARD_ERR(parse_func);                                                 \
       return SUCCESS;                                                          \
     }                                                                          \
   } while (0)
@@ -53,7 +52,7 @@ ROLFRError ignore_keyword(const char *line, struct BDFFont *font) {
 
 ROLFRError parse_font_name(const char *line, struct BDFFont *font) {
   char *font_name = malloc(strlen(line) + 1);
-  if (sscanf(line, "%s", font_name) == 0) {
+  if (sscanf(line, "%*s %s", font_name) < 1) {
     free(font_name);
     return PARSE_ERROR;
   }
@@ -61,9 +60,28 @@ ROLFRError parse_font_name(const char *line, struct BDFFont *font) {
   return SUCCESS;
 }
 
+ROLFRError parse_font_size(const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %u %u %u", &font->size[0], &font->size[1],
+             &font->size[2]) < 3) {
+    return PARSE_ERROR;
+  }
+  return SUCCESS;
+}
+
+ROLFRError parse_font_bounding_box(const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %d %d %d %d", &font->font_bouding_box[0],
+             &font->font_bouding_box[1], &font->font_bouding_box[2],
+             &font->font_bouding_box[3]) < 4) {
+    return PARSE_ERROR;
+  }
+  return SUCCESS;
+}
+
 ROLFRError parse_global_keyword(char *line, const char *keyword,
                                 struct BDFFont *font) {
-  KEYWORD_CASE(line, keyword, font, "FONT", parse_font_name);
+  KEYWORD_CASE(keyword, "FONT", parse_font_name(line, font));
+  KEYWORD_CASE(keyword, "SIZE", parse_font_size(line, font));
+  KEYWORD_CASE(keyword, "FONTBOUNDINGBOX", parse_font_bounding_box(line, font));
   FORWARD_ERR(ignore_keyword(line, font));
   return SUCCESS;
 }
@@ -136,6 +154,7 @@ ROLFRError load_bdf_font_from_file(const char *path, ROLFont *result_font) {
 }
 
 void free_bdf_font(struct BDFFont *font) {
-  if (font->name) free(font->name);
+  if (font->name)
+    free(font->name);
   free(font);
 }
