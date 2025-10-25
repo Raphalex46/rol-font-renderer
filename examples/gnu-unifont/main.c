@@ -1,9 +1,10 @@
 #include "GL/glew.h"
+#include "errors.h"
+#include "font_loader.h"
 #include "shader.h"
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GLFW/glfw3.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -19,6 +20,19 @@ void updateViewport(GLFWwindow *window) {
 }
 
 int main() {
+  // Load BDF font
+  ROLFont *result_font;
+  ROLFRError err = load_font_from_file(
+      BDF, "examples/common/fonts/bdf/unifont.bdf", &result_font);
+  if (err != SUCCESS) {
+    fprintf(stderr, "Failed to load BDF font, error: %s\n",
+            get_rolfr_error_string(err));
+    exit(EXIT_FAILURE);
+  }
+  // Print some info about the font
+  printf("font name: %s\n", result_font->name);
+  free_font(BDF, result_font);
+
   // Set error callback
   glfwSetErrorCallback(error_callback);
 
@@ -47,7 +61,8 @@ int main() {
 
   // Shader compilation
   shaderId shaderProgram =
-      compileAndLinkShader("examples/common/shaders/vertex.glsl", "examples/common/shaders/frag.glsl");
+      compileAndLinkShader("examples/common/shaders/vertex.glsl",
+                           "examples/common/shaders/frag.glsl");
   useShader(shaderProgram);
 
   // Rectangle data
@@ -67,7 +82,7 @@ int main() {
 
   unsigned int indices[] = {0, 1, 3, 0, 3, 2};
 
-// clang-format off
+  // clang-format off
   unsigned char textureData[] =
   {
     0, 0, 0,
@@ -75,7 +90,7 @@ int main() {
     255, 255, 255,
     0, 0, 0
   };
-// clang-format on
+  // clang-format on
 
   unsigned int VAO;
   glGenVertexArrays(1, &VAO);

@@ -9,3 +9,4 @@ target_link_libraries(gnu-unifont GLEW::GLEW)
 
 target_link_libraries(gnu-unifont m)
 target_link_libraries(gnu-unifont example-utils)
+target_link_libraries(gnu-unifont rol-font-renderer)
