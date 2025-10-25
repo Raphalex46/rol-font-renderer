@@ -8,6 +8,7 @@ typedef enum ROLFRError {
   FILE_READ,
   UNEXPECTED_EOF,
   PARSE_ERROR,
+  UNSUPPORTED_ENCODING
 } ROLFRError;
 
 const char *get_rolfr_error_string(ROLFRError);

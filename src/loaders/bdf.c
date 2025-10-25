@@ -34,8 +34,12 @@
     }                                                                          \
   } while (0)
 
+enum ParserSection { GLOBAL, GLYPH, PROPERTIES };
+
 struct ParserState {
   size_t current_line;
+  size_t current_glyph;
+  enum ParserSection section;
 };
 
 ROLFRError remove_keyword(char **line, const char *keyword) {
@@ -77,16 +81,79 @@ ROLFRError parse_font_bounding_box(const char *line, struct BDFFont *font) {
   return SUCCESS;
 }
 
-ROLFRError parse_global_keyword(char *line, const char *keyword,
-                                struct BDFFont *font) {
-  KEYWORD_CASE(keyword, "FONT", parse_font_name(line, font));
-  KEYWORD_CASE(keyword, "SIZE", parse_font_size(line, font));
-  KEYWORD_CASE(keyword, "FONTBOUNDINGBOX", parse_font_bounding_box(line, font));
-  FORWARD_ERR(ignore_keyword(line, font));
+ROLFRError parse_font_start_properties(struct ParserState *parser_state) {
+  parser_state->section = PROPERTIES;
   return SUCCESS;
 }
 
-ROLFRError parse_global_font(FILE *file, struct BDFFont *font) {
+ROLFRError parse_font_end_properties(struct ParserState *parser_state) {
+  parser_state->section = GLOBAL;
+  return SUCCESS;
+}
+
+ROLFRError parse_font_chars(const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %zu", &font->n_glyphs) == 0) {
+    return PARSE_ERROR;
+  }
+  font->glyphs = malloc(font->n_glyphs * sizeof(struct BDFGlyph));
+  return SUCCESS;
+}
+
+ROLFRError parse_font_start_char(struct ParserState *parser_state,
+                                 const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %s",
+             font->glyphs[parser_state->current_glyph].name) == 0) {
+    return PARSE_ERROR;
+  }
+  parser_state->section = GLYPH;
+  return SUCCESS;
+}
+
+ROLFRError parse_font_end_char(struct ParserState *parser_state) {
+  ++parser_state->current_glyph;
+  parser_state->section = GLOBAL;
+  return SUCCESS;
+}
+
+ROLFRError parse_font_char_encoding(struct ParserState *parser_state, const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %d", &font->glyphs[parser_state->current_glyph].encoding) == 0) {
+    return PARSE_ERROR;
+  }
+  if (font->glyphs[parser_state->current_glyph].encoding == -1) {
+    return UNSUPPORTED_ENCODING;
+  }
+  return SUCCESS;
+}
+
+ROLFRError parse_global_keyword(struct ParserState *parser_state, char *line,
+                                const char *keyword, struct BDFFont *font) {
+  switch (parser_state->section) {
+  case GLOBAL:
+    KEYWORD_CASE(keyword, "FONT", parse_font_name(line, font));
+    KEYWORD_CASE(keyword, "SIZE", parse_font_size(line, font));
+    KEYWORD_CASE(keyword, "FONTBOUNDINGBOX",
+                 parse_font_bounding_box(line, font));
+    KEYWORD_CASE(keyword, "STARTPROPERTIES",
+                 parse_font_start_properties(parser_state));
+    KEYWORD_CASE(keyword, "CHARS", parse_font_chars(line, font));
+    KEYWORD_CASE(keyword, "STARTCHAR",
+                 parse_font_start_char(parser_state, line, font));
+    FORWARD_ERR(ignore_keyword(line, font));
+    break;
+  case PROPERTIES:
+    KEYWORD_CASE(keyword, "ENDPROPERTIES",
+                 parse_font_end_properties(parser_state));
+    FORWARD_ERR(ignore_keyword(line, font));
+    break;
+  case GLYPH:
+    KEYWORD_CASE(keyword, "ENCODING", parse_font_char_encoding(parser_state, line, font));
+    KEYWORD_CASE(keyword, "ENDCHAR", parse_font_end_char(parser_state));
+  }
+  return SUCCESS;
+}
+
+ROLFRError parse_global_font(struct ParserState *parser_state, FILE *file,
+                             struct BDFFont *font) {
   char *line = NULL;
   size_t line_size = 0;
   char *keyword = NULL;
@@ -107,7 +174,7 @@ ROLFRError parse_global_font(FILE *file, struct BDFFont *font) {
       free(line);
       return PARSE_ERROR;
     }
-    FORWARD_ERR(parse_global_keyword(line, keyword, font));
+    FORWARD_ERR(parse_global_keyword(parser_state, line, keyword, font));
   }
   if (line) {
     free(line);
@@ -120,6 +187,8 @@ ROLFRError parse_global_font(FILE *file, struct BDFFont *font) {
 
 ROLFRError parse_bdf_font(FILE *file, struct BDFFont *font) {
   struct ParserState parser_state;
+  parser_state.section = GLOBAL;
+  parser_state.current_glyph = 0;
   char *line = NULL;
   size_t line_size;
 
@@ -133,7 +202,7 @@ ROLFRError parse_bdf_font(FILE *file, struct BDFFont *font) {
     free(line);
   }
 
-  FORWARD_ERR(parse_global_font(file, font));
+  FORWARD_ERR(parse_global_font(&parser_state, file, font));
   return SUCCESS;
 }
 
@@ -156,5 +225,7 @@ ROLFRError load_bdf_font_from_file(const char *path, ROLFont *result_font) {
 void free_bdf_font(struct BDFFont *font) {
   if (font->name)
     free(font->name);
+  if (font->glyphs)
+    free(font->glyphs);
   free(font);
 }
