@@ -8,6 +8,8 @@
 ///
 /// This parser limits itself to BDF version 2.1 files.
 
+#include "errors.h"
+#include "font_loader.h"
 #include <stddef.h>
 
 #define BDF_LINE_MAX
@@ -30,6 +32,8 @@ struct BDFFont {
   char *bitmaps; ///< A buffer containing all character bitmaps.
 };
 
-typedef struct BDFFont ROLFont;
+ROLFRError load_bdf_font_from_file(const char *path, struct BDFFont *result_font);
+
+void free_bdf_font(struct BDFFont *font);
 
 #endif // __BDF_H__
