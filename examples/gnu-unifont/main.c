@@ -31,6 +31,12 @@ int main() {
   }
   // Print some info about the font
   printf("font name: %s\n", result_font->name);
+  printf("font point size: %u\n", result_font->size[0]);
+  printf("font x resolution: %u, y resolution: %u\n", result_font->size[1],
+         result_font->size[2]);
+  printf("bounding box: x: %d, y: %d. offset: x: %d, y: %d\n",
+         result_font->font_bouding_box[0], result_font->font_bouding_box[1],
+         result_font->font_bouding_box[2], result_font->font_bouding_box[3]);
   free_font(BDF, result_font);
 
   // Set error callback
