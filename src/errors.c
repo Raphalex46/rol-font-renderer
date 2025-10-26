@@ -14,6 +14,8 @@ const char *get_rolfr_error_string(ROLFRError err) {
       return "unexpected end of file";
     case PARSE_ERROR:
       return "parse error";
+    case UNDEFINED_GLYPH:
+      return "requested glyph is unknown";
     default:
       return "unkown error";
   }
