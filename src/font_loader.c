@@ -30,6 +30,7 @@ ROLFRError get_glyph(ROLFont *font, unsigned int encoding, ROLGlyph *glyph) {
       glyph->height = font->glyphs[i].bbx[1];
       glyph->off_x = font->glyphs[i].bbx[2];
       glyph->off_y = font->glyphs[i].bbx[3];
+      return SUCCESS;
     }
   }
   return UNDEFINED_GLYPH;
