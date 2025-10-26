@@ -20,7 +20,7 @@ struct BDFGlyph {
   float swidth[2]; ///< Unimplemented.
   unsigned int dwidth[2]; ///< device width in device pixels.
   int bbx[4]; ///< BBw, BBh, BBxoff0x, BByoff0y.
-  char *bitmap; ///< Pointer to the bitmap data.
+  unsigned char *bitmap; ///< Pointer to the bitmap data.
 };
 
 struct BDFFont {
@@ -29,7 +29,7 @@ struct BDFFont {
   int font_bouding_box[4]; ///< FBB, FBBy, Xoff, Yoff.
   size_t n_glyphs; ///< Number of glyphs in the font.
   struct BDFGlyph *glyphs; ///< List of glyphs.
-  char *bitmaps; ///< A buffer containing all character bitmaps.
+  unsigned char *bitmaps; ///< A buffer containing all character bitmaps.
 };
 
 ROLFRError load_bdf_font_from_file(const char *path, struct BDFFont *result_font);

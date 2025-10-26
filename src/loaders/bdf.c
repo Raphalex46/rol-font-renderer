@@ -34,11 +34,13 @@
     }                                                                          \
   } while (0)
 
-enum ParserSection { GLOBAL, GLYPH, PROPERTIES };
+enum ParserSection { GLOBAL, GLYPH, PROPERTIES, BITMAP };
 
 struct ParserState {
   size_t current_line;
   size_t current_glyph;
+  size_t current_bitmap_line;
+  unsigned char *bitmap_ptr;
   enum ParserSection section;
 };
 
@@ -91,11 +93,25 @@ ROLFRError parse_font_end_properties(struct ParserState *parser_state) {
   return SUCCESS;
 }
 
-ROLFRError parse_font_chars(const char *line, struct BDFFont *font) {
+ROLFRError parse_font_chars(struct ParserState *parser_state, const char *line, struct BDFFont *font) {
   if (sscanf(line, "%*s %zu", &font->n_glyphs) == 0) {
     return PARSE_ERROR;
   }
   font->glyphs = malloc(font->n_glyphs * sizeof(struct BDFGlyph));
+  // Allocate enough space for all font bitmaps.
+  // We take the bounding box of the font and compute the required memory for a single bitmap as follows:
+  //
+  // We need at least the height of the bounding box in bytes, multiplied
+  // by the lowest number of bytes necessary to represent each row.
+  // We compute the size necessary for a row by doing ((row - 1) >> 3) + 1.
+  // With this formula, a line of 16 (requiring 2 bytes) would evaluate to
+  //       ((16 - 1) >> 3 + 1) = 2,
+  // while ((17 - 1) >> 3 + 1) = 3,
+  // and   ((15 - 1) >> 3 + 1) = 2.
+  // This is what we want.
+  font->bitmaps = malloc(font->n_glyphs * font->font_bouding_box[1] *
+                         (((font->font_bouding_box[0] - 1) >> 3) + 1));
+  parser_state->bitmap_ptr = font->bitmaps;
   return SUCCESS;
 }
 
@@ -160,6 +176,33 @@ ROLFRError parse_font_char_bounding_box(struct ParserState *parser_state,
   return SUCCESS;
 }
 
+ROLFRError parse_font_char_bitmap(struct ParserState *parser_state,
+                                  const char *line, struct BDFFont *font) {
+  parser_state->section = BITMAP;
+  parser_state->current_bitmap_line = 0;
+  font->glyphs[parser_state->current_glyph].bitmap = parser_state->bitmap_ptr;
+  return SUCCESS;
+}
+
+ROLFRError parse_font_char_bitmap_line(struct ParserState *parser_state,
+                                       const char *line, struct BDFFont *font) {
+  size_t line_size = strlen(line) - 1;
+  if (line_size % 2) {
+    return PARSE_ERROR;
+  }
+  for (size_t i = 0; i < line_size; i += 2) {
+    char byte_str[3] = {line[0], line[1], 0};
+    unsigned char byte = strtoul(byte_str, NULL, 16);
+    *(parser_state->bitmap_ptr) = byte;
+    ++parser_state->bitmap_ptr;
+    line += 2;
+  }
+  if (++parser_state->current_bitmap_line >= font->glyphs[parser_state->current_glyph].bbx[1]) {
+    parser_state->section = GLYPH;
+  }
+  return SUCCESS;
+}
+
 ROLFRError parse_global_keyword(struct ParserState *parser_state, char *line,
                                 const char *keyword, struct BDFFont *font) {
   switch (parser_state->section) {
@@ -170,7 +213,7 @@ ROLFRError parse_global_keyword(struct ParserState *parser_state, char *line,
                  parse_font_bounding_box(line, font));
     KEYWORD_CASE(keyword, "STARTPROPERTIES",
                  parse_font_start_properties(parser_state));
-    KEYWORD_CASE(keyword, "CHARS", parse_font_chars(line, font));
+    KEYWORD_CASE(keyword, "CHARS", parse_font_chars(parser_state, line, font));
     KEYWORD_CASE(keyword, "STARTCHAR",
                  parse_font_start_char(parser_state, line, font));
     FORWARD_ERR(ignore_keyword(line, font));
@@ -189,7 +232,11 @@ ROLFRError parse_global_keyword(struct ParserState *parser_state, char *line,
                  parse_font_char_dwidth(parser_state, line, font));
     KEYWORD_CASE(keyword, "BBX",
                  parse_font_char_bounding_box(parser_state, line, font));
+    KEYWORD_CASE(keyword, "BITMAP",
+                 parse_font_char_bitmap(parser_state, line, font));
     KEYWORD_CASE(keyword, "ENDCHAR", parse_font_end_char(parser_state));
+  case BITMAP:
+    FORWARD_ERR(parse_font_char_bitmap_line(parser_state, line, font));
   }
   return SUCCESS;
 }
@@ -269,5 +316,8 @@ void free_bdf_font(struct BDFFont *font) {
     free(font->name);
   if (font->glyphs)
     free(font->glyphs);
+  if (font->bitmaps) {
+    free(font->bitmaps);
+  }
   free(font);
 }
