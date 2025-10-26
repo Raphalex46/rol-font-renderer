@@ -19,7 +19,7 @@ struct BDFGlyph {
   unsigned int encoding; ///< Encoding.
   float swidth[2]; ///< Unimplemented.
   unsigned int dwidth[2]; ///< device width in device pixels.
-  unsigned int bbx[4]; ///< BBw, BBh, BBxoff0x, BByoff0y.
+  int bbx[4]; ///< BBw, BBh, BBxoff0x, BByoff0y.
   char *bitmap; ///< Pointer to the bitmap data.
 };
 

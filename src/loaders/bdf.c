@@ -101,8 +101,8 @@ ROLFRError parse_font_chars(const char *line, struct BDFFont *font) {
 
 ROLFRError parse_font_start_char(struct ParserState *parser_state,
                                  const char *line, struct BDFFont *font) {
-  if (sscanf(line, "%*s %s",
-             font->glyphs[parser_state->current_glyph].name) == 0) {
+  if (sscanf(line, "%*s %s", font->glyphs[parser_state->current_glyph].name) ==
+      0) {
     return PARSE_ERROR;
   }
   parser_state->section = GLYPH;
@@ -115,12 +115,47 @@ ROLFRError parse_font_end_char(struct ParserState *parser_state) {
   return SUCCESS;
 }
 
-ROLFRError parse_font_char_encoding(struct ParserState *parser_state, const char *line, struct BDFFont *font) {
-  if (sscanf(line, "%*s %d", &font->glyphs[parser_state->current_glyph].encoding) == 0) {
+ROLFRError parse_font_char_encoding(struct ParserState *parser_state,
+                                    const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %d",
+             &font->glyphs[parser_state->current_glyph].encoding) == 0) {
     return PARSE_ERROR;
   }
   if (font->glyphs[parser_state->current_glyph].encoding == -1) {
     return UNSUPPORTED_ENCODING;
+  }
+  return SUCCESS;
+}
+
+ROLFRError parse_font_char_swidth(struct ParserState *parser_state,
+                                  const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %f %f",
+             &font->glyphs[parser_state->current_glyph].swidth[0],
+             &font->glyphs[parser_state->current_glyph].swidth[1]) < 2) {
+    return PARSE_ERROR;
+  }
+  return SUCCESS;
+}
+
+ROLFRError parse_font_char_dwidth(struct ParserState *parser_state,
+                                  const char *line, struct BDFFont *font) {
+  if (sscanf(line, "%*s %u %u",
+             &font->glyphs[parser_state->current_glyph].dwidth[0],
+             &font->glyphs[parser_state->current_glyph].dwidth[1]) < 2) {
+    return PARSE_ERROR;
+  }
+  return SUCCESS;
+}
+
+ROLFRError parse_font_char_bounding_box(struct ParserState *parser_state,
+                                        const char *line,
+                                        struct BDFFont *font) {
+  if (sscanf(line, "%*s %d %d %d %d",
+             &font->glyphs[parser_state->current_glyph].bbx[0],
+             &font->glyphs[parser_state->current_glyph].bbx[1],
+             &font->glyphs[parser_state->current_glyph].bbx[2],
+             &font->glyphs[parser_state->current_glyph].bbx[3]) < 4) {
+    return PARSE_ERROR;
   }
   return SUCCESS;
 }
@@ -146,7 +181,14 @@ ROLFRError parse_global_keyword(struct ParserState *parser_state, char *line,
     FORWARD_ERR(ignore_keyword(line, font));
     break;
   case GLYPH:
-    KEYWORD_CASE(keyword, "ENCODING", parse_font_char_encoding(parser_state, line, font));
+    KEYWORD_CASE(keyword, "ENCODING",
+                 parse_font_char_encoding(parser_state, line, font));
+    KEYWORD_CASE(keyword, "SWIDTH",
+                 parse_font_char_swidth(parser_state, line, font));
+    KEYWORD_CASE(keyword, "DWIDTH",
+                 parse_font_char_dwidth(parser_state, line, font));
+    KEYWORD_CASE(keyword, "BBX",
+                 parse_font_char_bounding_box(parser_state, line, font));
     KEYWORD_CASE(keyword, "ENDCHAR", parse_font_end_char(parser_state));
   }
   return SUCCESS;
