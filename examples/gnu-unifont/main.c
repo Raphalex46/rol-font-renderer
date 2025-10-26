@@ -1,6 +1,8 @@
 #include "GL/glew.h"
+#include "display/texture.h"
 #include "errors.h"
 #include "font_loader.h"
+#include "glyph.h"
 #include "shader.h"
 #include <GL/gl.h>
 #include <GL/glext.h>
@@ -21,35 +23,34 @@ void updateViewport(GLFWwindow *window) {
 
 int main() {
   // Load BDF font
-  ROLFont *result_font;
-  ROLFRError err = load_font_from_file(
-      BDF, "examples/common/fonts/bdf/unifont.bdf", &result_font);
+  ROLFont *font;
+  ROLFRError err =
+      load_font_from_file(BDF, "examples/common/fonts/bdf/unifont.bdf", &font);
   if (err != SUCCESS) {
     fprintf(stderr, "Failed to load BDF font, error: %s\n",
             get_rolfr_error_string(err));
     exit(EXIT_FAILURE);
   }
   // Print some info about the font
-  printf("font name: %s\n", result_font->name);
-  printf("font point size: %u\n", result_font->size[0]);
-  printf("font x resolution: %u, y resolution: %u\n", result_font->size[1],
-         result_font->size[2]);
-  printf("bounding box: x: %d, y: %d. offset: x: %d, y: %d\n",
-         result_font->font_bouding_box[0], result_font->font_bouding_box[1],
-         result_font->font_bouding_box[2], result_font->font_bouding_box[3]);
-  printf("font number of glyphs: %zu\n", result_font->n_glyphs);
-  for (size_t i = 0; i < result_font->n_glyphs; ++i) {
-    printf("glyph %s:\n", result_font->glyphs[i].name);
-    printf("\t encoding: %d\n", result_font->glyphs[i].encoding);
-    printf("\t swidth: x: %f, y: %f\n", result_font->glyphs[i].swidth[0],
-           result_font->glyphs[i].swidth[1]);
-    printf("\t dwidth: x: %u, y: %u\n", result_font->glyphs[i].dwidth[0],
-           result_font->glyphs[i].dwidth[1]);
-    printf("\t bounding box: w: %d, h: %d, off_x: %d, off_y: %d\n",
-           result_font->glyphs[i].bbx[0], result_font->glyphs[i].bbx[1],
-           result_font->glyphs[i].bbx[2], result_font->glyphs[i].bbx[3]);
-  }
-  free_font(BDF, result_font);
+//  printf("font name: %s\n", font->name);
+//  printf("font point size: %u\n", font->size[0]);
+//  printf("font x resolution: %u, y resolution: %u\n", font->size[1],
+//         font->size[2]);
+//  printf("bounding box: x: %d, y: %d. offset: x: %d, y: %d\n",
+//         font->font_bouding_box[0], font->font_bouding_box[1],
+//         font->font_bouding_box[2], font->font_bouding_box[3]);
+//  printf("font number of glyphs: %zu\n", font->n_glyphs);
+//  for (size_t i = 0; i < font->n_glyphs; ++i) {
+//    printf("glyph %s:\n", font->glyphs[i].name);
+//    printf("\t encoding: %d\n", font->glyphs[i].encoding);
+//    printf("\t swidth: x: %f, y: %f\n", font->glyphs[i].swidth[0],
+//           font->glyphs[i].swidth[1]);
+//    printf("\t dwidth: x: %u, y: %u\n", font->glyphs[i].dwidth[0],
+//           font->glyphs[i].dwidth[1]);
+//    printf("\t bounding box: w: %d, h: %d, off_x: %d, off_y: %d\n",
+//           font->glyphs[i].bbx[0], font->glyphs[i].bbx[1],
+//           font->glyphs[i].bbx[2], font->glyphs[i].bbx[3]);
+//  }
 
   // Set error callback
   glfwSetErrorCallback(error_callback);
@@ -76,6 +77,8 @@ int main() {
 
   // Set byte alignment for texture
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // Shader compilation
   shaderId shaderProgram =
@@ -101,13 +104,13 @@ int main() {
   unsigned int indices[] = {0, 1, 3, 0, 3, 2};
 
   // clang-format off
-  unsigned char textureData[] =
-  {
-    0, 0, 0,
-    255, 255, 255,
-    255, 255, 255,
-    0, 0, 0
-  };
+//  unsigned char textureData[] =
+//  {
+//    0, 0, 0,
+//    255, 255, 255,
+//    255, 255, 255,
+//    0, 0, 0
+//  };
   // clang-format on
 
   unsigned int VAO;
@@ -133,8 +136,6 @@ int main() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE,
-               textureData);
 
   unsigned int EBO;
   glGenBuffers(1, &EBO);
@@ -142,12 +143,35 @@ int main() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
+  unsigned int encoding = 0;
+  double old_time = glfwGetTime();
+  double delta = 0.;
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     // Update viewport size and clear
     updateViewport(window);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    ROLGlyph glyph;
+    if (delta >= 0.5) {
+      encoding++;
+      delta = 0.;
+    }
+    if ((err = get_glyph(font, encoding, &glyph)) != SUCCESS) {
+      fprintf(stderr, "An error occured while loading a glyph: %s\n",
+          get_rolfr_error_string(err));
+    }
+    unsigned char *textureData;
+    if ((err = build_texture(&glyph, &textureData)) != SUCCESS) {
+      fprintf(stderr,
+          "An error occured while building the texture for a glyph: %s\n",
+          get_rolfr_error_string(err));
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, glyph.width, glyph.height, 0, GL_RED, GL_UNSIGNED_BYTE,
+               textureData);
+    delta += glfwGetTime() - old_time;
+    old_time = glfwGetTime();
 
     // Set shaders and VAO and draw triangle
     useShader(shaderProgram);
@@ -156,7 +180,10 @@ int main() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glfwSwapBuffers(window);
     glfwWaitEvents();
+    free(textureData);
   }
+
+  free_font(BDF, font);
 
   glfwDestroyWindow(window);
   glfwTerminate();
