@@ -41,6 +41,13 @@ int main() {
   for (size_t i = 0; i < result_font->n_glyphs; ++i) {
     printf("glyph %s:\n", result_font->glyphs[i].name);
     printf("\t encoding: %d\n", result_font->glyphs[i].encoding);
+    printf("\t swidth: x: %f, y: %f\n", result_font->glyphs[i].swidth[0],
+           result_font->glyphs[i].swidth[1]);
+    printf("\t dwidth: x: %u, y: %u\n", result_font->glyphs[i].dwidth[0],
+           result_font->glyphs[i].dwidth[1]);
+    printf("\t bounding box: w: %d, h: %d, off_x: %d, off_y: %d\n",
+           result_font->glyphs[i].bbx[0], result_font->glyphs[i].bbx[1],
+           result_font->glyphs[i].bbx[2], result_font->glyphs[i].bbx[3]);
   }
   free_font(BDF, result_font);
 
