@@ -7,6 +7,7 @@ shaderId compileAndLinkShader(const char *vertexPath, const char *fragPath);
 void useShader(shaderId Id);
 void setInt(shaderId Id, const char *name, int value);
 void setFloat(shaderId Id, const char *name, float value);
+void setMat4(shaderId Id, const char *name, float *value);
 
 
 #endif // __COMMON_UTILS_SHADER_H__

@@ -6,6 +6,8 @@ find_package(OpenGL REQUIRED)
 target_link_libraries(opengl OpenGL::GL)
 find_package(GLEW)
 target_link_libraries(opengl GLEW::GLEW)
+find_package(cglm REQUIRED)
+target_link_libraries(opengl cglm)
 
 target_link_libraries(opengl m)
 target_link_libraries(opengl example-utils)

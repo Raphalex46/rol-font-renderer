@@ -80,3 +80,7 @@ void setInt(shaderId Id, const char *name, int value) {
 void setFloat(shaderId Id, const char *name, float value) {
   glUniform1f(glGetUniformLocation(Id, name), value);
 }
+
+void setMat4(shaderId Id, const char *name, float *value) {
+  glUniformMatrix4fv (glGetUniformLocation(Id, name), 1, GL_FALSE, value);
+}

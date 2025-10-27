@@ -7,6 +7,8 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GLFW/glfw3.h>
+#include <cglm/cam.h>
+#include <cglm/cglm.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,25 +34,25 @@ int main() {
     exit(EXIT_FAILURE);
   }
   // Print some info about the font
-//  printf("font name: %s\n", font->name);
-//  printf("font point size: %u\n", font->size[0]);
-//  printf("font x resolution: %u, y resolution: %u\n", font->size[1],
-//         font->size[2]);
-//  printf("bounding box: x: %d, y: %d. offset: x: %d, y: %d\n",
-//         font->font_bouding_box[0], font->font_bouding_box[1],
-//         font->font_bouding_box[2], font->font_bouding_box[3]);
-//  printf("font number of glyphs: %zu\n", font->n_glyphs);
-//  for (size_t i = 0; i < font->n_glyphs; ++i) {
-//    printf("glyph %s:\n", font->glyphs[i].name);
-//    printf("\t encoding: %d\n", font->glyphs[i].encoding);
-//    printf("\t swidth: x: %f, y: %f\n", font->glyphs[i].swidth[0],
-//           font->glyphs[i].swidth[1]);
-//    printf("\t dwidth: x: %u, y: %u\n", font->glyphs[i].dwidth[0],
-//           font->glyphs[i].dwidth[1]);
-//    printf("\t bounding box: w: %d, h: %d, off_x: %d, off_y: %d\n",
-//           font->glyphs[i].bbx[0], font->glyphs[i].bbx[1],
-//           font->glyphs[i].bbx[2], font->glyphs[i].bbx[3]);
-//  }
+  //  printf("font name: %s\n", font->name);
+  //  printf("font point size: %u\n", font->size[0]);
+  //  printf("font x resolution: %u, y resolution: %u\n", font->size[1],
+  //         font->size[2]);
+  //  printf("bounding box: x: %d, y: %d. offset: x: %d, y: %d\n",
+  //         font->font_bouding_box[0], font->font_bouding_box[1],
+  //         font->font_bouding_box[2], font->font_bouding_box[3]);
+  //  printf("font number of glyphs: %zu\n", font->n_glyphs);
+  //  for (size_t i = 0; i < font->n_glyphs; ++i) {
+  //    printf("glyph %s:\n", font->glyphs[i].name);
+  //    printf("\t encoding: %d\n", font->glyphs[i].encoding);
+  //    printf("\t swidth: x: %f, y: %f\n", font->glyphs[i].swidth[0],
+  //           font->glyphs[i].swidth[1]);
+  //    printf("\t dwidth: x: %u, y: %u\n", font->glyphs[i].dwidth[0],
+  //           font->glyphs[i].dwidth[1]);
+  //    printf("\t bounding box: w: %d, h: %d, off_x: %d, off_y: %d\n",
+  //           font->glyphs[i].bbx[0], font->glyphs[i].bbx[1],
+  //           font->glyphs[i].bbx[2], font->glyphs[i].bbx[3]);
+  //  }
 
   // Set error callback
   glfwSetErrorCallback(error_callback);
@@ -90,13 +92,13 @@ int main() {
   // clang-format off
   float rectangle[] =
     {
-      -1.0f, -1.0f, 0.0f,
+      0.0f, 0.0f, 0.0f,
       0.0f, 0.0f,
-      1.0f, -1.0f, 0.0f,
+      100.0f, 0.0f, 0.0f,
       1.0f, 0.0f,
-      -1.0f, 1.0f, 0.0f,
+      0.0f, 100.0f, 0.0f,
       0.0f, 1.0f,
-      1.0f, 1.0f, 0.0f,
+      100.0f, 100.0f, 0.0f,
       1.0f, 1.0f
     };
   // clang-format on
@@ -120,7 +122,7 @@ int main() {
   unsigned int VBO;
   glGenBuffers(1, &VBO);
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle), rectangle, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle), rectangle, GL_DYNAMIC_DRAW);
 
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
@@ -141,46 +143,75 @@ int main() {
   glGenBuffers(1, &EBO);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
+               GL_DYNAMIC_DRAW);
 
-  unsigned int encoding = 0;
-  double old_time = glfwGetTime();
-  double delta = 0.;
+  double old_time;
+  double acc_time;
+  float y_off;
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     // Update viewport size and clear
     updateViewport(window);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    // Set projection matrix
+    mat4 proj;
+    glm_ortho(0.0f, (float)width, 0.0f, (float)height, 0.0f, 1.0f, proj);
+    setMat4(shaderProgram, "projection", (float *) proj);
 
-    ROLGlyph glyph;
-    if (delta >= 0.5) {
-      encoding++;
-      delta = 0.;
+
+    float scale = 1.;
+    float xpos = 0., ypos = height - (16 - y_off)* scale;
+    acc_time = glfwGetTime() - old_time;
+    old_time = glfwGetTime();
+    if (acc_time >= 0.5) {
+      y_off += 16;
     }
-    if ((err = get_glyph(font, encoding, &glyph)) != SUCCESS) {
+    for (size_t i = 0; i < font->n_glyphs; ++i) {
+    ROLGlyph glyph;
+    if ((err = get_glyph(font, font->glyphs[i].encoding, &glyph)) != SUCCESS) {
       fprintf(stderr, "An error occured while loading a glyph: %s\n",
-          get_rolfr_error_string(err));
+              get_rolfr_error_string(err));
     }
     unsigned char *textureData;
     if ((err = build_texture(&glyph, &textureData)) != SUCCESS) {
       fprintf(stderr,
-          "An error occured while building the texture for a glyph: %s\n",
-          get_rolfr_error_string(err));
+              "An error occured while building the texture for a glyph: %s\n",
+              get_rolfr_error_string(err));
     }
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, glyph.width, glyph.height, 0, GL_RED, GL_UNSIGNED_BYTE,
-               textureData);
-    delta += glfwGetTime() - old_time;
-    old_time = glfwGetTime();
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, glyph.width, glyph.height, 0, GL_RED,
+                 GL_UNSIGNED_BYTE, textureData);
 
     // Set shaders and VAO and draw triangle
     useShader(shaderProgram);
     glBindVertexArray(VAO);
+
+    float rectangle[] =
+    {
+      xpos, ypos, 0.0f,
+      0.0f, 0.0f,
+      xpos + glyph.width * scale, ypos, 0.0f,
+      1.0f, 0.0f,
+      xpos, ypos + glyph.height * scale, 0.0f,
+      0.0f, 1.0f,
+      xpos + glyph.width * scale, ypos + glyph.height * scale, 0.0f,
+      1.0f, 1.0f
+    };
+
+    xpos += glyph.width * scale + 1;
+    if (xpos >= width) {
+      xpos = 0;
+      ypos -= 16 * scale;
+    }
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(rectangle), rectangle);
     glBindTexture(GL_TEXTURE_2D, texture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    free(textureData);
+    }
     glfwSwapBuffers(window);
     glfwWaitEvents();
-    free(textureData);
   }
 
   free_font(BDF, font);
