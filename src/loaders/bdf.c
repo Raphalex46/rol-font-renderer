@@ -1,5 +1,6 @@
 #include "loaders/bdf.h"
 #include "errors.h"
+#include "font_loader.h"
 
 #include <stdarg.h>
 #include <stdio.h>

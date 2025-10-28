@@ -9,7 +9,6 @@
 /// This parser limits itself to BDF version 2.1 files.
 
 #include "errors.h"
-#include "font_loader.h"
 #include <stddef.h>
 
 #define BDF_LINE_MAX
