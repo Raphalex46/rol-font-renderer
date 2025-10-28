@@ -11,7 +11,7 @@ enum FontFormat { BDF };
 
 ROLFRError load_font_from_file(enum FontFormat format, const char *path, ROLFont **result_font);
 
-ROLFRError get_glyph(ROLFont *font, unsigned int encoding, ROLGlyph *glyph);
+ROLFRError get_glyph(ROLFont *font, struct BDFGlyph *glyph_bdf, ROLGlyph *glyph);
 
 void free_font(enum FontFormat format, ROLFont *font);
 
