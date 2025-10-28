@@ -104,11 +104,16 @@ void updateViewport(GLFWwindow *window) {
   glViewport(0, 0, width, height);
 }
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s <font_file>\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  const char *font_file = argv[1];
   // Load BDF font
   ROLFont *font;
   ROLFRError err =
-      load_font_from_file(BDF, "examples/common/fonts/bdf/unifont.bdf", &font);
+      load_font_from_file(BDF, argv[1], &font);
   if (err != SUCCESS) {
     fprintf(stderr, "Failed to load BDF font, error: %s\n",
             get_rolfr_error_string(err));
@@ -147,7 +152,7 @@ int main() {
   glewExperimental = GL_TRUE;
   glewInit();
 
-  glfwSwapInterval(1);
+  glfwSwapInterval(0);
 
   // Set byte alignment for texture
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -233,7 +238,7 @@ int main() {
       xpos += glyph.width * scale + 1;
       if (xpos >= width) {
         xpos = 0.0f;
-        ypos += 16.0f;
+        ypos += font->font_bouding_box[1];
       }
     }
     glfwSwapBuffers(window);
