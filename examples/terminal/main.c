@@ -4,10 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s <font_file>\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+  const char *font_file = argv[1];
   // Load font
   ROLFont *font;
-  load_font_from_file(BDF, "examples/common/fonts/bdf/unifont.bdf", &font);
+  load_font_from_file(BDF, font_file, &font);
   for (size_t i = 0; i < font->n_glyphs; ++i) {
     char *str;
     ROLGlyph glyph;
