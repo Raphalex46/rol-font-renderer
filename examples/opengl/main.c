@@ -165,18 +165,24 @@ int main(int argc, char **argv) {
                            "examples/opengl/shaders/frag.glsl");
   useShader(shaderProgram);
 
+  ROLTextureCtx *ctx;
+  if ((err = init_texture_ctx(&ctx, font)) != SUCCESS) {
+    fprintf(stderr,
+            "An error occured while initializing the ROL texture context: %s\n",
+            get_rolfr_error_string(err));
+  }
   // Build texture for all glyphs!
   unsigned int *glyph_textures = malloc(sizeof(unsigned int) * font->n_glyphs);
   glGenTextures(font->n_glyphs, glyph_textures);
-  for (size_t i = 0; i < font->n_glyphs; ++i) {
+  ROLTexture texture;
+  for (size_t i = 0; i < 1; ++i) {
     ROLGlyph glyph;
     if ((err = get_glyph(font, &font->glyphs[i], &glyph)) != SUCCESS) {
       fprintf(stderr, "An error occurred while loading a glyph: %s\n",
               get_rolfr_error_string(err));
       exit(EXIT_FAILURE);
     }
-    unsigned char *texture_data;
-    if ((err = build_texture(&glyph, &texture_data)) != SUCCESS) {
+    if ((err = get_texture(ctx, &glyph, &texture)) != SUCCESS) {
       fprintf(stderr,
               "An error occured while building the texture for a glyph: %s\n",
               get_rolfr_error_string(err));
@@ -188,11 +194,10 @@ int main(int argc, char **argv) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, glyph.width, glyph.height, 0, GL_RED,
-                 GL_UNSIGNED_BYTE, texture_data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_CHUNK_SIZE, TEXTURE_CHUNK_SIZE, 0, GL_RED,
+                 GL_UNSIGNED_BYTE, texture.texture_data);
     //    free(texture_data);
   }
-
   struct Quad quad;
   quad_init(&quad);
 
@@ -212,12 +217,12 @@ int main(int argc, char **argv) {
     setMat4(shaderProgram, "projection", (float *)proj);
     //    quad_draw(&quad);
 
-    float scale = 1.;
+    float scale = 3.;
     float xpos = 0.0f, ypos = 0.0f;
-    for (size_t i = 0; i < font->n_glyphs; ++i) {
-      if (ypos + y_off > height) {
-        break;
-      }
+    for (size_t i = 0; i < 1; ++i) {
+//      if (ypos + y_off > height) {
+//        break;
+//      }
       ROLGlyph glyph;
       if ((err = get_glyph(font, &font->glyphs[i], &glyph)) != SUCCESS) {
         fprintf(stderr, "An error occured while loading a glyph: %s\n",
@@ -225,15 +230,19 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
 
-      quad.pos_x = xpos;
-      quad.pos_y = ypos + y_off;
-      quad.width = (float)glyph.width;
-      quad.height = (float)glyph.height;
+      quad.pos_x = 0;
+      quad.pos_y = 0;
+      quad.width = TEXTURE_CHUNK_SIZE * scale;
+      quad.height = TEXTURE_CHUNK_SIZE * scale;
       quad.texture = glyph_textures[i];
 
-      if (ypos + y_off >= 0) {
+//      if (ypos + y_off >= 0) {
         quad_draw(&quad);
-      }
+//      }
+      quad.pos_x = TEXTURE_CHUNK_SIZE*scale;
+      quad.pos_y = TEXTURE_CHUNK_SIZE * scale;
+
+      quad_draw(&quad);
 
       xpos += glyph.width * scale + 1;
       if (xpos >= width) {
