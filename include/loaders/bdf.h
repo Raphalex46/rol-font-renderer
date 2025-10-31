@@ -14,6 +14,7 @@
 #define BDF_LINE_MAX
 
 struct BDFGlyph {
+  size_t id; ///< Position of this glyph in the whole font.
   char name[15]; ///< Glyph name.
   unsigned int encoding; ///< Encoding.
   float swidth[2]; ///< Unimplemented.
