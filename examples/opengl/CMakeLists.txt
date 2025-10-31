@@ -1,4 +1,4 @@
-add_executable(opengl main.c)
+add_executable(opengl main.c shader.c)
 
 find_package(glfw3 3.3 REQUIRED)
 target_link_libraries(opengl glfw)
@@ -10,5 +10,4 @@ find_package(cglm REQUIRED)
 target_link_libraries(opengl cglm)
 
 target_link_libraries(opengl m)
-target_link_libraries(opengl example-utils)
 target_link_libraries(opengl rol-font-renderer)
