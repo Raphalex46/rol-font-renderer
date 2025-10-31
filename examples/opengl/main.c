@@ -161,8 +161,8 @@ int main(int argc, char **argv) {
 
   // Shader compilation
   shaderId shaderProgram =
-      compileAndLinkShader("examples/common/shaders/vertex.glsl",
-                           "examples/common/shaders/frag.glsl");
+      compileAndLinkShader("examples/opengl/shaders/vertex.glsl",
+                           "examples/opengl/shaders/frag.glsl");
   useShader(shaderProgram);
 
   // Build texture for all glyphs!
