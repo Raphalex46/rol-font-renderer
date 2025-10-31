@@ -19,6 +19,10 @@ struct Quad {
   float width;
   float height;
   unsigned int texture;
+  float tex_off_x;
+  float tex_off_y;
+  float tex_width;
+  float tex_height;
   unsigned int vao;
   unsigned int vbo;
   unsigned int ebo;
@@ -65,13 +69,13 @@ void quad_draw(struct Quad *quad) {
   // clang-format off
   float rectangle[] = {
     quad->pos_x, quad->pos_y, 0.0f,
-    0.0f, 0.0f,
+    quad->tex_off_x, quad->tex_off_y,
     quad->pos_x + quad->width, quad->pos_y, 0.0f,
-    1.0f, 0.0f,
+    quad->tex_off_x + quad->tex_width, quad->tex_off_y,
     quad->pos_x, quad->pos_y + quad->height, 0.0f,
-    0.0f, 1.0f,
+    quad->tex_off_x, quad->tex_off_y + quad->tex_height,
     quad->pos_x + quad->width, quad->pos_y + quad->height, 0.0f,
-    1.0f, 1.0f
+    quad->tex_off_x + quad->tex_width, quad->tex_off_y + quad->tex_height
   };
 
   size_t data_size = sizeof(float) * (3 * 4 + 4 * 2);
@@ -86,7 +90,6 @@ void quad_draw(struct Quad *quad) {
   // Unbind VAO
   glBindVertexArray(0);
 }
-
 
 static float y_off = 0.0f;
 void scroll_callback(GLFWwindow *window, double x_offset, double y_offset) {
@@ -112,8 +115,7 @@ int main(int argc, char **argv) {
   const char *font_file = argv[1];
   // Load BDF font
   ROLFont *font;
-  ROLFRError err =
-      load_font_from_file(BDF, argv[1], &font);
+  ROLFRError err = load_font_from_file(BDF, argv[1], &font);
   if (err != SUCCESS) {
     fprintf(stderr, "Failed to load BDF font, error: %s\n",
             get_rolfr_error_string(err));
@@ -165,18 +167,24 @@ int main(int argc, char **argv) {
                            "examples/opengl/shaders/frag.glsl");
   useShader(shaderProgram);
 
+  ROLTextureCtx *ctx;
+  if ((err = init_texture_ctx(&ctx, font)) != SUCCESS) {
+    fprintf(stderr,
+            "An error occured while initializing the ROL texture context: %s\n",
+            get_rolfr_error_string(err));
+  }
   // Build texture for all glyphs!
   unsigned int *glyph_textures = malloc(sizeof(unsigned int) * font->n_glyphs);
   glGenTextures(font->n_glyphs, glyph_textures);
-  for (size_t i = 0; i < font->n_glyphs; ++i) {
+  ROLTexture texture;
+  for (size_t i = 0; i < 1; ++i) {
     ROLGlyph glyph;
     if ((err = get_glyph(font, &font->glyphs[i], &glyph)) != SUCCESS) {
       fprintf(stderr, "An error occurred while loading a glyph: %s\n",
               get_rolfr_error_string(err));
       exit(EXIT_FAILURE);
     }
-    unsigned char *texture_data;
-    if ((err = build_texture(&glyph, &texture_data)) != SUCCESS) {
+    if ((err = get_texture(ctx, &glyph, &texture)) != SUCCESS) {
       fprintf(stderr,
               "An error occured while building the texture for a glyph: %s\n",
               get_rolfr_error_string(err));
@@ -188,11 +196,11 @@ int main(int argc, char **argv) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, glyph.width, glyph.height, 0, GL_RED,
-                 GL_UNSIGNED_BYTE, texture_data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_CHUNK_SIZE,
+                 TEXTURE_CHUNK_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE,
+                 texture.texture_data);
     //    free(texture_data);
   }
-
   struct Quad quad;
   quad_init(&quad);
 
@@ -212,12 +220,12 @@ int main(int argc, char **argv) {
     setMat4(shaderProgram, "projection", (float *)proj);
     //    quad_draw(&quad);
 
-    float scale = 1.;
+    float scale = 3.;
     float xpos = 0.0f, ypos = 0.0f;
-    for (size_t i = 0; i < font->n_glyphs; ++i) {
-      if (ypos + y_off > height) {
-        break;
-      }
+    for (size_t i = 0; i < 1; ++i) {
+      //      if (ypos + y_off > height) {
+      //        break;
+      //      }
       ROLGlyph glyph;
       if ((err = get_glyph(font, &font->glyphs[i], &glyph)) != SUCCESS) {
         fprintf(stderr, "An error occured while loading a glyph: %s\n",
@@ -225,15 +233,30 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
 
-      quad.pos_x = xpos;
-      quad.pos_y = ypos + y_off;
-      quad.width = (float)glyph.width;
-      quad.height = (float)glyph.height;
+      quad.pos_x = 0;
+      quad.pos_y = 0;
+      quad.width = TEXTURE_CHUNK_SIZE * scale;
+      quad.height = TEXTURE_CHUNK_SIZE * scale;
       quad.texture = glyph_textures[i];
+      quad.tex_off_x = 0.0f;
+      quad.tex_off_y = 0.0f;
+      quad.tex_width = 1.0f;
+      quad.tex_height = 1.0f;
 
-      if (ypos + y_off >= 0) {
-        quad_draw(&quad);
-      }
+
+      //      if (ypos + y_off >= 0) {
+      quad_draw(&quad);
+      //      }
+      quad.pos_x = TEXTURE_CHUNK_SIZE * scale;
+      quad.pos_y = TEXTURE_CHUNK_SIZE * scale;
+      quad.width = glyph.width * scale;
+      quad.height = glyph.height * scale;
+      quad.tex_off_x = texture.off_x / (float) TEXTURE_CHUNK_SIZE;
+      quad.tex_off_y = texture.off_y / (float) TEXTURE_CHUNK_SIZE;
+      quad.tex_width = texture.width / (float) TEXTURE_CHUNK_SIZE;
+      quad.tex_height = texture.height / (float) TEXTURE_CHUNK_SIZE;
+
+      quad_draw(&quad);
 
       xpos += glyph.width * scale + 1;
       if (xpos >= width) {
