@@ -25,13 +25,14 @@ ROLTexture get_texture_info(ROLTextureCtx *ctx, ROLGlyph *glyph,
                         .off_y = get_off_y(ctx, local_id),
                         .width = glyph->width,
                         .height = glyph->height,
-                        .texture_data = ctx->atlases[chunk_id]};
+                        .texture_data = ctx->atlases[chunk_id],
+                        .chunk_id = chunk_id
+  };
   return texture;
 }
 
 static inline void write_to_texture_atlas(ROLTextureAtlas atlas, size_t x,
                                           size_t y, unsigned char byte) {
-  y = TEXTURE_CHUNK_SIZE - y - 1;
   atlas[y * TEXTURE_CHUNK_SIZE + x] = byte;
 }
 
@@ -45,7 +46,7 @@ void fill_texture_atlas(ROLTextureCtx *ctx, size_t chunk_id) {
     size_t width = ctx->font->glyphs[i].bbx[0];
     size_t height = ctx->font->glyphs[i].bbx[1];
     size_t n_bytes = ((width - 1) >> 3) + 1;
-    unsigned char *bitmap_ptr = ctx->font->glyphs[i].bitmap;
+    unsigned char *bitmap_ptr = ctx->font->glyphs[i].bitmap + (height - 1) * n_bytes;
     for (size_t j = off_y; j < off_y + height; ++j) {
       for (size_t k = 0; k < n_bytes; ++k) {
         for (size_t in_b = 0; in_b < 8 && k * 8 + in_b < width; ++in_b) {
@@ -55,6 +56,7 @@ void fill_texture_atlas(ROLTextureCtx *ctx, size_t chunk_id) {
         }
         ++bitmap_ptr;
       }
+      bitmap_ptr -= n_bytes * 2;
     }
   }
 }
@@ -86,3 +88,7 @@ ROLFRError get_texture(ROLTextureCtx *ctx, ROLGlyph *glyph,
     return SUCCESS;
   }
 }
+size_t get_num_chunks(ROLTextureCtx *ctx) {
+  return ctx->font->n_glyphs / ctx->glyph_per_atlas;
+}
+

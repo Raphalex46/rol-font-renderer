@@ -16,6 +16,7 @@ typedef struct {
   size_t off_y;
   size_t width;
   size_t height;
+  size_t chunk_id;
 } ROLTexture;
 
 typedef struct {
@@ -31,5 +32,7 @@ ROLFRError init_texture_ctx(ROLTextureCtx **ctx, ROLFont *font);
 /// \brief Generate a texture from a glyph.
 ROLFRError get_texture(ROLTextureCtx *ctx, ROLGlyph *glyph,
                        ROLTexture *texture);
+
+size_t get_num_chunks(ROLTextureCtx *ctx);
 
 #endif // __TEXTURE_H__

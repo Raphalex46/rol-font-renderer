@@ -1,4 +1,5 @@
 #include "GL/glew.h"
+#include "display/opengl/opengl.h"
 #include "display/texture.h"
 #include "errors.h"
 #include "font_loader.h"
@@ -18,11 +19,7 @@ struct Quad {
   float pos_y;
   float width;
   float height;
-  unsigned int texture;
-  float tex_off_x;
-  float tex_off_y;
-  float tex_width;
-  float tex_height;
+  ROLOpenGLGlyph texture;
   unsigned int vao;
   unsigned int vbo;
   unsigned int ebo;
@@ -69,13 +66,13 @@ void quad_draw(struct Quad *quad) {
   // clang-format off
   float rectangle[] = {
     quad->pos_x, quad->pos_y, 0.0f,
-    quad->tex_off_x, quad->tex_off_y,
+    quad->texture.tex_off_x, quad->texture.tex_off_y,
     quad->pos_x + quad->width, quad->pos_y, 0.0f,
-    quad->tex_off_x + quad->tex_width, quad->tex_off_y,
+    quad->texture.tex_off_x + quad->texture.tex_width, quad->texture.tex_off_y,
     quad->pos_x, quad->pos_y + quad->height, 0.0f,
-    quad->tex_off_x, quad->tex_off_y + quad->tex_height,
+    quad->texture.tex_off_x, quad->texture.tex_off_y + quad->texture.tex_height,
     quad->pos_x + quad->width, quad->pos_y + quad->height, 0.0f,
-    quad->tex_off_x + quad->tex_width, quad->tex_off_y + quad->tex_height
+    quad->texture.tex_off_x + quad->texture.tex_width, quad->texture.tex_off_y + quad->texture.tex_height
   };
 
   size_t data_size = sizeof(float) * (3 * 4 + 4 * 2);
@@ -84,7 +81,7 @@ void quad_draw(struct Quad *quad) {
   // Update buffer data
   glBufferSubData(GL_ARRAY_BUFFER, 0, data_size, quad->data);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, quad->texture);
+  glBindTexture(GL_TEXTURE_2D, quad->texture.atlas);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
   // Unbind VAO
@@ -173,34 +170,10 @@ int main(int argc, char **argv) {
             "An error occured while initializing the ROL texture context: %s\n",
             get_rolfr_error_string(err));
   }
-  // Build texture for all glyphs!
-  unsigned int *glyph_textures = malloc(sizeof(unsigned int) * font->n_glyphs);
-  glGenTextures(font->n_glyphs, glyph_textures);
-  ROLTexture texture;
-  for (size_t i = 0; i < 1; ++i) {
-    ROLGlyph glyph;
-    if ((err = get_glyph(font, &font->glyphs[i], &glyph)) != SUCCESS) {
-      fprintf(stderr, "An error occurred while loading a glyph: %s\n",
-              get_rolfr_error_string(err));
-      exit(EXIT_FAILURE);
-    }
-    if ((err = get_texture(ctx, &glyph, &texture)) != SUCCESS) {
-      fprintf(stderr,
-              "An error occured while building the texture for a glyph: %s\n",
-              get_rolfr_error_string(err));
-      exit(EXIT_FAILURE);
-    }
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, glyph_textures[i]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_CHUNK_SIZE,
-                 TEXTURE_CHUNK_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE,
-                 texture.texture_data);
-    //    free(texture_data);
-  }
+
+  ROLOpenGLTextureCtx *opengl_ctx;
+  init_opengl_texture_ctx(&opengl_ctx, font);
+
   struct Quad quad;
   quad_init(&quad);
 
@@ -220,12 +193,9 @@ int main(int argc, char **argv) {
     setMat4(shaderProgram, "projection", (float *)proj);
     //    quad_draw(&quad);
 
-    float scale = 3.;
+    float scale = 1.;
     float xpos = 0.0f, ypos = 0.0f;
-    for (size_t i = 0; i < 1; ++i) {
-      //      if (ypos + y_off > height) {
-      //        break;
-      //      }
+    for (size_t i = 0; i < font->n_glyphs; ++i) {
       ROLGlyph glyph;
       if ((err = get_glyph(font, &font->glyphs[i], &glyph)) != SUCCESS) {
         fprintf(stderr, "An error occured while loading a glyph: %s\n",
@@ -233,42 +203,27 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
 
-      quad.pos_x = 0;
-      quad.pos_y = 0;
-      quad.width = TEXTURE_CHUNK_SIZE * scale;
-      quad.height = TEXTURE_CHUNK_SIZE * scale;
-      quad.texture = glyph_textures[i];
-      quad.tex_off_x = 0.0f;
-      quad.tex_off_y = 0.0f;
-      quad.tex_width = 1.0f;
-      quad.tex_height = 1.0f;
-
-
-      //      if (ypos + y_off >= 0) {
-      quad_draw(&quad);
-      //      }
-      quad.pos_x = TEXTURE_CHUNK_SIZE * scale;
-      quad.pos_y = TEXTURE_CHUNK_SIZE * scale;
-      quad.width = glyph.width * scale;
-      quad.height = glyph.height * scale;
-      quad.tex_off_x = texture.off_x / (float) TEXTURE_CHUNK_SIZE;
-      quad.tex_off_y = texture.off_y / (float) TEXTURE_CHUNK_SIZE;
-      quad.tex_width = texture.width / (float) TEXTURE_CHUNK_SIZE;
-      quad.tex_height = texture.height / (float) TEXTURE_CHUNK_SIZE;
-
-      quad_draw(&quad);
-
-      xpos += glyph.width * scale + 1;
-      if (xpos >= width) {
+      if (xpos + glyph.width * scale >= width) {
         xpos = 0.0f;
-        ypos += font->font_bouding_box[1];
+        ypos += font->font_bouding_box[1] * scale;
       }
+
+      if (ypos + y_off >= 0 && ypos + y_off <= height) {
+        quad.pos_x = xpos;
+        quad.pos_y = ypos + y_off;
+        quad.width = glyph.width * scale;
+        quad.height = glyph.height * scale;
+        get_opengl_glyph(opengl_ctx, &glyph, &quad.texture);
+
+        quad_draw(&quad);
+      }
+
+      xpos += glyph.width * scale;
     }
     glfwSwapBuffers(window);
     glfwWaitEvents();
   }
 
-  free(glyph_textures);
   free_font(BDF, font);
 
   glfwDestroyWindow(window);
