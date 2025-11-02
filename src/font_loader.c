@@ -31,6 +31,7 @@ ROLFRError get_glyph(ROLFont *font, struct BDFGlyph *glyph_bdf, ROLGlyph *glyph)
     glyph->height = glyph_bdf->bbx[1];
     glyph->off_x = glyph_bdf->bbx[2];
     glyph->off_y = glyph_bdf->bbx[3];
+    glyph->id = glyph_bdf->id;
 
     return SUCCESS;
   } else {

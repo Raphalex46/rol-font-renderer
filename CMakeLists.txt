@@ -7,7 +7,13 @@ add_library(rol-font-renderer
   src/errors.c
   src/display/string.c
   src/display/texture.c
+  src/display/opengl/opengl.c
 )
+
+find_package(OpenGL REQUIRED)
+target_link_libraries(rol-font-renderer OpenGL::GL)
+find_package(GLEW)
+target_link_libraries(rol-font-renderer GLEW::GLEW)
 
 target_include_directories(rol-font-renderer PUBLIC include)
 add_subdirectory(examples)

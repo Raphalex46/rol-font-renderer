@@ -122,6 +122,7 @@ ROLFRError parse_font_start_char(struct ParserState *parser_state,
       0) {
     return PARSE_ERROR;
   }
+  font->glyphs[parser_state->current_glyph].id = parser_state->current_glyph;
   parser_state->section = GLYPH;
   return SUCCESS;
 }
