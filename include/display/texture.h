@@ -35,4 +35,6 @@ ROLFRError get_texture(ROLTextureCtx *ctx, ROLGlyph *glyph,
 
 size_t get_num_chunks(ROLTextureCtx *ctx);
 
+void free_texture_ctx(ROLTextureCtx *ctx);
+
 #endif // __TEXTURE_H__

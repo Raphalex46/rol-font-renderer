@@ -1,4 +1,5 @@
 #include "display/opengl/opengl.h"
+#include "display/texture.h"
 #include <GL/glew.h>
 
 void create_opengl_texture(ROLOpenGLTextureCtx *ctx, size_t chunk_id,
@@ -10,7 +11,7 @@ void create_opengl_texture(ROLOpenGLTextureCtx *ctx, size_t chunk_id,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, TEXTURE_CHUNK_SIZE, TEXTURE_CHUNK_SIZE,
-      0, GL_RED, GL_UNSIGNED_BYTE, texture_data);
+               0, GL_RED, GL_UNSIGNED_BYTE, texture_data);
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -47,3 +48,8 @@ ROLFRError init_opengl_texture_ctx(ROLOpenGLTextureCtx **ctx, ROLFont *font) {
   return SUCCESS;
 }
 
+void free_opengl_texture_ctx(ROLOpenGLTextureCtx *ctx) {
+  free(ctx->atlases);
+  free_texture_ctx(ctx->tex_ctx);
+  free(ctx);
+};

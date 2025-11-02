@@ -23,4 +23,6 @@ ROLFRError init_opengl_texture_ctx(ROLOpenGLTextureCtx **ctx, ROLFont *font);
 ROLFRError get_opengl_glyph(ROLOpenGLTextureCtx *ctx, ROLGlyph *glyph,
                             ROLOpenGLGlyph *opengl_glyph);
 
+void free_opengl_texture_ctx(ROLOpenGLTextureCtx *ctx);
+
 #endif // __OPENGL_H__
